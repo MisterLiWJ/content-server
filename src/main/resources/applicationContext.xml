@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+        xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xmlns:context="http://www.springframework.org/schema/context"
+        xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-4.0.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-4.0.xsd http://www.springframework.org/schema/data/mongo http://www.springframework.org/schema/data/mongo/spring-mongo.xsd">
+    <context:property-placeholder location="classpath:application.properties" />
+
+    <!-- Redis连接池 -->
+    <bean id="jedisPoolResource" class="shop.tanjie.content.contentserver.utils.redis.JedisPoolResource">
+        <property name="pool">
+            <bean class="redis.clients.jedis.JedisPool">
+                <constructor-arg index="0">
+                    <bean class="org.apache.commons.pool2.impl.GenericObjectPoolConfig">
+                        <property name="maxTotal" value="${redis.db.total}"/>
+                        <property name="maxIdle" value="${redis.db.maxIdle}"/>
+                        <property name="minIdle" value="${redis.db.minIdle}"/>
+                        <property name="maxWaitMillis" value="${redis.db.maxWaitMillis}"/>
+                    </bean>
+                </constructor-arg>
+                <constructor-arg index="1" value="${spring.redis.host}" type="java.lang.String"/>
+                <constructor-arg index="2" value="${spring.redis.port}" type="int"/>
+                <constructor-arg index="3" value="${redis.db.maxWaitMillis}"/>
+                <constructor-arg index="4" value="${spring.db.password}"/>
+            </bean>
+        </property>
+    </bean>
+
+    <!-- 如需多个逗号隔开 -->
+    <mongo:mongo-client id="mongo" host="${mongo.host}" port="${mongo.port}" >
+        <mongo:client-options
+                connections-per-host="${mongo.connectionsPerHost}"
+                threads-allowed-to-block-for-connection-multiplier="${mongo.threadsAllowedToBlockForConnectionMultiplier}"
+                connect-timeout="${mongo.connectTimeout}"
+                max-wait-time="${mongo.maxWaitTime}"
+                socket-keep-alive="${mongo.socketKeepAlive}"
+                socket-timeout="${mongo.socketTimeout}" />
+    </mongo:mongo-client>
+    <bean id="mongoTemplate" class="org.springframework.data.mongodb.core.MongoTemplate">
+        <constructor-arg ref="mongo"/>
+        <constructor-arg name="databaseName" value="${mongo.defaultDBName}"/>
+    </bean>
+
+    <!-- 线程池 -->
+    <!-- 异步线程池 -->
+    <bean id="taskExecutor" class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor">
+        <!-- 核心线程数 -->
+        <property name="corePoolSize" value="10" />
+        <!-- 最大线程数 -->
+        <property name="maxPoolSize" value="100" />
+        <!-- 队列最大长度 >=mainExecutor.maxSize -->
+        <property name="queueCapacity" value="1000" />
+        <!-- 线程池维护线程所允许的空闲时间 -->
+        <property name="keepAliveSeconds" value="300" />
+        <!-- 线程池对拒绝任务(无线程可用)的处理策略 -->
+        <property name="rejectedExecutionHandler">
+            <bean class="java.util.concurrent.ThreadPoolExecutor$CallerRunsPolicy" />
+        </property>
+    </bean>
+
+</beans>
